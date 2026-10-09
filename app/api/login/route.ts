@@ -1,0 +1,4 @@
+import {NextResponse} from 'next/server';
+import {passwordOK,newToken,cookieOptions} from '../../../lib/auth';
+const attempts=new Map<string,{count:number,until:number}>();
+export async function POST(req:Request){const ip=req.headers.get('x-forwarded-for')?.split(',')[0]||'visitor';const a=attempts.get(ip);if(a&&a.count>=10&&a.until>Date.now())return NextResponse.json({error:'Too many attempts. Try again later.'},{status:429});const {password}=await req.json();if(typeof password!=='string'||!passwordOK(password)){attempts.set(ip,{count:(a?.until&&a.until>Date.now()?a.count:0)+1,until:Date.now()+15*60_000});return NextResponse.json({error:'oops! that’s not the magic word ♡'},{status:401})}attempts.delete(ip);const res=NextResponse.json({ok:true});res.cookies.set('viren_session',newToken(false),cookieOptions());return res}
